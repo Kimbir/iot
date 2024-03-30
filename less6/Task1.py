@@ -1,4 +1,4 @@
-import PIL
+import PIL.ImageTk
 import cv2
 import threading
 import time
@@ -127,7 +127,16 @@ class VideoPlayer:
     def pause_video(self):
         self.pause = True
 
-
+    def update(self):
+        ret, frame = self.stream.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
+            self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
+            if not self.pause:
+                self.canvas.after(10, self.update)
+        else:
+            print("Видео не открылось")
 class Bootstrap:
     @staticmethod
     def init_environment():
