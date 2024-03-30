@@ -82,11 +82,30 @@ class Settings(Toplevel):
     def __init__(self, pl_video, video_path):
         super().__init__()
         self.title("Настройки")
-        self.geometry("400x200")
+        self.geometry("300x200")
 
         self.pl_video = pl_video
         self.video_path = video_path
 
+        self.label_pl_video = Tk.Label(self, text="PL Video:")
+        self.label_pl_video.pack()
+        self.entry_pl_video = Tk.Entry(self)
+        self.entry_pl_video.pack()
+        self.entry_pl_video.insert(0, str(self.pl_video))
+
+        self.label_video_path = Tk.Label(self, text="Video Path:")
+        self.label_video_path.pack()
+        self.entry_video_path = Tk.Entry(self)
+        self.entry_video_path.pack()
+        self.entry_video_path.insert(0, self.video_path)
+
+        self.button_save = Tk.Button(self, text="Сохранить", command=self.save_settings)
+        self.button_save.pack()
+
+    def save_settings(self):
+        self.pl_video = int(self.entry_pl_video.get())
+        self.video_path = self.entry_video_path.get()
+        self.destroy()
 
 class VideoPlayer:
     def update(self):
@@ -106,10 +125,7 @@ class VideoPlayer:
 
     def place(self, relx, rely):
         self.canvas.place(relx=relx, rely=rely)
-
-    def place(self, relx, rely):
-        self.canvas.place(relx=relx, rely=rely)
-
+        self.update()
     def update(self):
         ret, frame = self.stream.read()
         if ret:
