@@ -1,48 +1,143 @@
+import PIL
 import cv2
-import tkinter as tk
-from PIL import Image, ImageTk
+import threading
+import time
+import os
+from tkinter import Tk, Canvas, Button, CHECKBUTTON, Toplevel
+
+
+class MainWindow(Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Видео Анализ")
+        self.geometry("800x600")
+
+        self.canvas = Canvas(self, width=600, height=400)
+        self.canvas.pack()
+
+        self.start_pause_button = Button(self, text="Старт", command=self.play_pause)
+        self.start_pause_button.place(x=50, y=500)
+
+        self.take_photo_button = Button(self, text="Сделать фото", command=self.take_photo)
+        self.take_photo_button.place(x=200, y=500)
+
+        self.save_photo_button = Button(self, text="Сохранить фото", command=self.save_photo)
+        self.save_photo_button.place(x=350, y=500)
+
+        self.settings_button = Button(self, text="Настройки", command=self.open_settings)
+        self.settings_button.place(x=500, y=500)
+
+        self.pl_video = 1
+        self.video_path = "F:\ProgramsPy\iot\less6\Data/cats_video.mp4"
+        self.lock = threading.Lock()
+        self.cycleResult = threading.Event()
+
+    def play_pause(self):
+        if self.start_pause_button["text"] == "Старт":
+            self.start_pause_button["text"] = "Пауза"
+            self.video_player = VideoPlayer(self.pl_video, self.video_path, self, 600, 400)
+            self.video_player.place(relx=0, rely=0)
+        else:
+            self.start_pause_button["text"] = "Старт"
+            self.video_player.place_forget()
+
+    def take_photo(self):
+        if self.pl_video:
+            self.cycleResult.clear()
+            if not hasattr(self, "video_thread"):
+                self.video_thread = threading.Thread(target=self.find_in_stream, args=(self.cycleResult, self.lock))
+                self.video_thread.start()
+            else:
+                self.cycleResult.set()
+        else:
+            ret, frame = cv2.VideoCapture(self.video_path if self.pl_video else 0, cv2.CAP_DSHOW).read()
+            if ret:
+                cv2.imwrite("photo.jpg", frame)
+
+    def find_in_stream(self, cycleResult, lock):
+        cap = cv2.VideoCapture(self.video_path if self.pl_video else 0, cv2.CAP_DSHOW)
+        frame_width = int(cap.get(3))
+        frame_height = int(cap.get(4))
+        out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 10, (frame_width, frame_height))
+
+        while not cycleResult.is_set():
+            ret, frame = cap.read()
+            if ret:
+                cv2.imwrite(f"photo_{time.time()}.jpg", frame)
+                out.write(frame)
+
+        cap.release()
+        out.release()
+
+    def save_photo(self):
+        if os.path.exists("photo.jpg"):
+            os.rename("photo.jpg", f"saved_photo_{time.time()}.jpg")
+
+    def open_settings(self):
+        settings_window = Settings(self.pl_video, self.video_path)
+        self.wait_window(settings_window)
+
+
+class Settings(Toplevel):
+    def __init__(self, pl_video, video_path):
+        super().__init__()
+        self.title("Настройки")
+        self.geometry("400x200")
+
+        self.pl_video = pl_video
+        self.video_path = video_path
 
 
 class VideoPlayer:
-    def __init__(self, video_file, master=None, width=100, height=100):
-        self.cap = cv2.VideoCapture(video_file)
+    def update(self):
+        ret, frame = self.stream.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
+            self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
+            if not self.pause:
+                self.canvas.after(10, self.update)
+    def __init__(self, pl_video, video_path, master, width, height):
         self.master = master
-        self.canvas = tk.Canvas(master, height=height, width=width)
-        self.delay = int(1000 / self.cap.get(cv2.CAP_PROP_FPS))
-
-    def place(self, x, y):
-        self.canvas.place(x=x, y=y)
+        self.stream = cv2.VideoCapture(video_path if pl_video else 0, cv2.CAP_DSHOW)
+        self.canvas = Canvas(master, width=width, height=height)
+        self.pause = False
         self.update()
 
+    def place(self, relx, rely):
+        self.canvas.place(relx=relx, rely=rely)
+
+    def place(self, relx, rely):
+        self.canvas.place(relx=relx, rely=rely)
+
     def update(self):
-        if button['text'] == 'stop':
-            ret, frame = self.cap.read()
-        else:
-            self.master.after(self.delay, self.update)
-            return
+        ret, frame = self.stream.read()
         if ret:
-            if button['text'] == 'stop':
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                self.photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
-                self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-            self.master.after(self.delay, self.update)
-        else:
-            self.cap.release()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
+            self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
+            if not self.pause:
+                self.canvas.after(10, self.update)
+
+    def place_forget(self):
+        self.canvas.place_forget()
+        self.pause_video()
+        self.stream.release()
+
+    def pause_video(self):
+        self.pause = True
 
 
-def pause_unpause():
-    if button['text'] == 'stop':
-        button['text'] = 'play'
-    else:
-        button['text'] = 'stop'
+class Bootstrap:
+    @staticmethod
+    def init_environment():
+        pass
+
+    @staticmethod
+    def run():
+        root = MainWindow()
+        root.mainloop()
 
 
-window = tk.Tk()
-window.geometry('1000x1000')
-button = tk.Button(window, text='stop', command=pause_unpause)
-button.place(x=0, y=0)
-video = VideoPlayer('cats_video.mp4', master=window, width=800, height=1000)
-video.place(x=50, y=0)
-
-
-window.mainloop()
+if __name__ == "__main__":
+    Bootstrap.run()
