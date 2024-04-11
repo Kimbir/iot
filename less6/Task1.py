@@ -28,7 +28,7 @@ class MainWindow(Tk):
         self.settings_button.place(x=500, y=500)
 
         self.pl_video = 1
-        self.video_path = "F:\ProgramsPy\iot\less6\Data/cats_video.mp4"
+        self.video_path = r"C:\Users\mriva\PycharmProjects\pythonProject\iot\less 5\cats_video.mp4"
         self.lock = threading.Lock()
         self.cycleResult = threading.Event()
 
@@ -50,12 +50,12 @@ class MainWindow(Tk):
             else:
                 self.cycleResult.set()
         else:
-            ret, frame = cv2.VideoCapture(self.video_path if self.pl_video else 0, cv2.CAP_DSHOW).read()
+            ret, frame = cv2.VideoCapture(self.video_path if self.pl_video else 0).read()
             if ret:
                 cv2.imwrite("photo.jpg", frame)
 
     def find_in_stream(self, cycleResult, lock):
-        cap = cv2.VideoCapture(self.video_path if self.pl_video else 0, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(self.video_path if self.pl_video else 0)
         frame_width = int(cap.get(3))
         frame_height = int(cap.get(4))
         out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 10, (frame_width, frame_height))
@@ -118,7 +118,7 @@ class VideoPlayer:
                 self.canvas.after(10, self.update)
     def __init__(self, pl_video, video_path, master, width, height):
         self.master = master
-        self.stream = cv2.VideoCapture(video_path if pl_video else 0, cv2.CAP_DSHOW)
+        self.stream = cv2.VideoCapture(video_path if pl_video else 0)
         self.canvas = Canvas(master, width=width, height=height)
         self.pause = False
         self.update()
